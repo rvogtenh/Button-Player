@@ -15,5 +15,5 @@ Thumbs.db
 /**/*.pem
 
 # Igrnore Dropbox's own ignore file, which is used to ignore files from being synced to Dropbox
-.dropbox-ignore
+.dropboxignore
 
