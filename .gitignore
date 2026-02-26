@@ -1,0 +1,19 @@
+# build files and dependencies
+/node_modules
+.build
+.data
+
+# ignore all environment config files
+/config/env-*
+
+# junk files
+package-lock.json
+.DS_Store
+Thumbs.db
+
+# TLS certificates
+/**/*.pem
+
+# Igrnore Dropbox's own ignore file, which is used to ignore files from being synced to Dropbox
+.dropbox-ignore
+
