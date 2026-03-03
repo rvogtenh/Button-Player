@@ -1,6 +1,9 @@
-name: getting-started
-author: the author
+name: Responsive Space
+author: Raimund Vogtenhuber
 clients:
   player:
     target: browser
     default: true
+  controller:
+    target: browser
+    default: false

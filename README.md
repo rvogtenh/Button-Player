@@ -1,17 +1,26 @@
-# Button Player
+# Responsive Space
 
 A web application for audience-participation performances built with [soundworks](https://soundworks.dev) (Ircam).
 
 ## Concept
 
-When a participant opens the page and joins the performance, they see a button. Pressing the button triggers a synthesizer sound with a short attack and longer release — designed for live audience interaction.
+Audience members open the page, see a landing screen, and join the performance. They are then presented with a button — pressing it triggers a sound controlled in real-time by the performer via a separate controller page.
+
+The performer can shape the sound for two independent groups of players simultaneously, choosing between a synthesizer (3 oscillators, ADSR envelope) and sample playback (ASR envelope).
+
+## Pages
+
+| URL | Role | Description |
+|---|---|---|
+| `http://127.0.0.1:8000` | Player | Landing page → button |
+| `http://127.0.0.1:8000/controller` | Controller | Real-time sound control for all groups |
 
 ## Tech Stack
 
 - **[soundworks](https://soundworks.dev)** — client/server framework for networked audio performances
 - **[Lit](https://lit.dev/)** — lightweight web component library for the UI
 - **[sc-components](https://github.com/ircam-ismm/sc-components)** — Ircam UI components
-- **Web Audio API** — synthesizer sound engine
+- **Web Audio API** — synthesizer and sample playback engine
 - **SCSS** — styles, compiled to CSS
 
 ## Project Structure
@@ -19,16 +28,25 @@ When a participant opens the page and joins the performance, they see a button. 
 ```
 src/
 ├── server/
-│   ├── index.js          # soundworks Server, registers schemas and plugins
+│   ├── index.js              # soundworks Server, schemas, audio file watcher
+│   ├── schemas/
+│   │   ├── sound-params.js   # Global: audioFiles list, resetCounter
+│   │   ├── group-params.js   # Per-group: mode, oscillators, ADSR, sampleFile
+│   │   └── player-info.js    # Per-player: clientId, groupId
 │   └── tmpl/
-│       └── default.tmpl  # HTML template served to browser clients
+│       └── default.tmpl      # HTML template for all client roles
 ├── clients/
 │   ├── player/
-│   │   └── index.js      # Player client entry point (UI + Web Audio)
-│   ├── components/       # Reusable Lit web components
-│   └── styles/           # SCSS source files
+│   │   ├── index.js          # Player: landing → join → button
+│   │   └── audio-engine.js   # Synth + sample playback engine
+│   ├── controller/
+│   │   └── index.js          # Controller: group controls, player overview
+│   ├── components/           # Reusable Lit web components
+│   └── styles/               # SCSS source files
+public/
+└── audio/                    # Audio samples (.wav, .mp3, .ogg, .flac)
 config/
-└── env-default.yaml      # Server config (port 8000)
+└── env-default.yaml          # Server config (port 8000)
 ```
 
 ## Getting Started
@@ -45,7 +63,20 @@ Start in development mode (build + watch + server):
 npm run dev
 ```
 
-Open in browser: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+Open player: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+Open controller: [http://127.0.0.1:8000/controller](http://127.0.0.1:8000/controller)
+
+## Audio Samples
+
+Place audio files (`.wav`, `.mp3`, `.ogg`, `.flac`) in `public/audio/`. They are detected automatically at server startup and watched for changes at runtime — no restart needed when adding or removing files.
+
+## Controller Features
+
+- **2 groups** — players are distributed between Group 1 and Group 2
+- **Synth mode** — 3 oscillators with waveform and frequency control, ADSR envelope
+- **Sample mode** — sample selection, ASR envelope (sustain fills automatically between attack and release)
+- **Master gain** per group
+- **Reset** — sends all players back to the landing page
 
 ## Available Scripts
 
@@ -62,12 +93,6 @@ Emulate multiple audience members in one browser window:
 
 ```
 http://127.0.0.1:8000?emulate=10
-```
-
-Override the default port:
-
-```bash
-PORT=3000 npm run start
 ```
 
 ## soundworks Wizard

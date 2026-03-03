@@ -73,7 +73,155 @@ body.loading {
   }
 }
 
-// default styles for controller layout
+// ─── Groups grid ─────────────────────────────────────────────────────────────
+
+.no-players {
+  font-size: 1.2rem;
+  color: var(--sw-light-font-color);
+  letter-spacing: 0.1em;
+}
+
+.groups-grid {
+  display: grid;
+  gap: 20px;
+
+  &.groups-1 { grid-template-columns: 1fr; max-width: 480px; }
+  &.groups-2 { grid-template-columns: 1fr 1fr; }
+}
+
+.group-card {
+  border: 1px solid var(--sw-lighter-background-color);
+  padding: 16px;
+
+  .group-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.2rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--sw-lighter-background-color);
+  }
+
+  .player-tags {
+    display: flex;
+    gap: 6px;
+  }
+
+  .player-tag {
+    font-size: 1.0rem;
+    padding: 2px 6px;
+    background-color: var(--sw-lighter-background-color);
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+}
+
+// ─── Controller param controls ───────────────────────────────────────────────
+
+.param-group {
+  margin-bottom: 1.8rem;
+
+  & > label {
+    display: block;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--sw-light-font-color);
+    margin-bottom: 0.6rem;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    max-width: 400px;
+    accent-color: var(--sw-font-color);
+  }
+
+  select {
+    background-color: var(--sw-light-background-color);
+    color: var(--sw-font-color);
+    border: 1px solid var(--sw-lighter-background-color);
+    padding: 4px 8px;
+    font-size: 1.2rem;
+    font-family: var(--sw-font-family);
+    cursor: pointer;
+  }
+}
+
+.reset-btn {
+  padding: 8px 20px;
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--sw-font-family);
+  background-color: var(--sw-light-background-color);
+  border: 1px solid #a94442;
+  color: #a94442;
+  cursor: pointer;
+
+  &:active {
+    background-color: #a94442;
+    color: var(--sw-font-color);
+  }
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.mode-btn {
+  padding: 8px 20px;
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--sw-font-family);
+  background-color: var(--sw-light-background-color);
+  border: 1px solid var(--sw-lighter-background-color);
+  color: var(--sw-light-font-color);
+  cursor: pointer;
+
+  &.active {
+    color: var(--sw-font-color);
+    border-color: var(--sw-font-color);
+    background-color: var(--sw-lighter-background-color);
+  }
+}
+
+.osc-group {
+  border-left: 2px solid var(--sw-lighter-background-color);
+  padding-left: 12px;
+  margin-bottom: 1.4rem;
+}
+
+.osc-row,
+.adsr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+
+  .sub-label {
+    font-size: 1.1rem;
+    color: var(--sw-light-font-color);
+    min-width: 140px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    max-width: 300px;
+  }
+}
+
+.adsr-row.dimmed {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+// ─── Default controller layout ───────────────────────────────────────────────
+
 .controller-layout {
   display: block;
   flex-grow: 1;

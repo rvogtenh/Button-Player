@@ -1,3 +1,6 @@
+# Claude Code instructions (local only)
+CLAUDE.md
+
 # build files and dependencies
 /node_modules
 .build

@@ -4,39 +4,32 @@ import { loadConfig, launcher } from '@soundworks/helpers/browser.js';
 import { html, render } from 'lit';
 
 import '../components/sw-credits.js';
+import '../components/sw-landing.js';
+import { AudioEngine } from './audio-engine.js';
 
-// Shared across emulated clients — created lazily on first user gesture
+// Module-level: survive soundworks reconnects (main() is re-called on reconnect)
 let audioContext = null;
+let engine = null;
+let joined = false;
+let playerInfo = null;     // player-info state (deleted on reset / disconnect)
+let myGroupState = null;   // group-params state this player belongs to
 
-function playSound() {
-  const now = audioContext.currentTime;
+const SESSION_KEY = 'sw-player-session';
 
-  const osc1 = audioContext.createOscillator();
-  const osc2 = audioContext.createOscillator();
-  const gain = audioContext.createGain();
+function saveSession(groupId, resetCounter) {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ joined: true, groupId, resetCounter }));
+}
 
-  osc1.connect(gain);
-  osc2.connect(gain);
-  gain.connect(audioContext.destination);
+function clearSession() {
+  sessionStorage.removeItem(SESSION_KEY);
+}
 
-  // Two slightly detuned sines for a full, warm tone
-  osc1.type = 'sine';
-  osc1.frequency.value = 220;
-  osc2.type = 'sine';
-  osc2.frequency.value = 220 * 2.005; // subtle beating
-
-  // Envelope: short attack (30 ms), longer exponential release (1.5 s)
-  const attack = 0.03;
-  const release = 1.5;
-
-  gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(0.5, now + attack);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + attack + release);
-
-  osc1.start(now);
-  osc2.start(now);
-  osc1.stop(now + attack + release);
-  osc2.stop(now + attack + release);
+function loadSession() {
+  try {
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null');
+  } catch {
+    return null;
+  }
 }
 
 async function main($container) {
@@ -47,32 +40,100 @@ async function main($container) {
 
   await client.start();
 
-  async function onTrigger() {
-    // Create AudioContext on first gesture (browser autoplay policy)
-    if (!audioContext) {
-      audioContext = new AudioContext();
-    }
-    if (audioContext.state === 'suspended') {
-      await audioContext.resume();
-    }
-    playSound();
+  // Global state: listen for resetCounter changes
+  const soundParams = await client.stateManager.attach('sound-params');
+
+  // Get both group states; pick ours by client.id % 2
+  const groupCollection = await client.stateManager.getCollection('group-params');
+  const groups = [...groupCollection].sort((a, b) => a.get('groupId') - b.get('groupId'));
+
+  // Clean up stale module-level references from previous connection
+  if (engine) { engine.dispose(); engine = null; }
+  playerInfo = null;
+  myGroupState = null;
+
+  function renderLanding() {
+    render(html`<sw-landing @join=${onJoin}></sw-landing>`, $container);
   }
 
-  function renderApp() {
+  function renderPlayer() {
     render(html`
       <div class="simple-layout">
         <div class="trigger-layout">
-          <button
-            class="trigger-btn"
-            @pointerdown=${onTrigger}
-          >Play</button>
+          <button class="trigger-btn" @pointerdown=${onTrigger}>Play</button>
         </div>
-        <sw-credits .infos="${client.config.app}"></sw-credits>
+        <sw-credits .infos="${config.app}"></sw-credits>
       </div>
     `, $container);
   }
 
-  renderApp();
+  async function onJoin(groupId) {
+    const resolvedGroupId = groupId ?? (client.id % 2);
+    myGroupState = groups[resolvedGroupId] ?? groups[0];
+    const actualGroupId = myGroupState.get('groupId');
+
+    joined = true;
+    saveSession(actualGroupId, soundParams.get('resetCounter'));
+
+    if (!audioContext) {
+      audioContext = new AudioContext();
+    }
+
+    // Create player-info so controller can display this player in the right column
+    playerInfo = await client.stateManager.create('player-info', {
+      clientId: client.id,
+      groupId: actualGroupId,
+    });
+
+    engine = new AudioEngine(audioContext);
+    engine.updateParams(myGroupState.getValues());
+    myGroupState.onUpdate(values => engine.updateParams(values));
+
+    renderPlayer();
+  }
+
+  async function onTrigger() {
+    if (!engine) return;
+    if (audioContext && audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+    engine.trigger();
+  }
+
+  async function onReset() {
+    if (playerInfo) { playerInfo.detach(); playerInfo = null; }
+    if (engine) { engine.dispose(); engine = null; }
+    myGroupState = null;
+    joined = false;
+    clearSession();
+    renderLanding();
+  }
+
+  soundParams.onUpdate(values => {
+    if ('resetCounter' in values) {
+      onReset();
+    }
+  });
+
+  // Restore state: reconnect within same JS session
+  if (joined && myGroupState) {
+    engine = new AudioEngine(audioContext);
+    engine.updateParams(myGroupState.getValues());
+    myGroupState.onUpdate(values => engine.updateParams(values));
+    playerInfo = await client.stateManager.create('player-info', {
+      clientId: client.id,
+      groupId: myGroupState.get('groupId'),
+    });
+    renderPlayer();
+  } else {
+    // Page reload: check sessionStorage
+    const session = loadSession();
+    if (session?.joined && session.resetCounter === soundParams.get('resetCounter')) {
+      await onJoin(session.groupId);
+    } else {
+      renderLanding();
+    }
+  }
 }
 
 // `?emulate=N` runs N clients side-by-side in the same page
