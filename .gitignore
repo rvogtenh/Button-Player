@@ -6,9 +6,6 @@ CLAUDE.md
 .build
 .data
 
-# ignore all environment config files
-/config/env-*
-
 # junk files
 package-lock.json
 .DS_Store
