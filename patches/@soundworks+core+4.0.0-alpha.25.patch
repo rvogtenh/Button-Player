@@ -1,0 +1,27 @@
+diff --git a/node_modules/@soundworks/core/src/server/Socket.js b/node_modules/@soundworks/core/src/server/Socket.js
+index 4674e5e..c3ee6d1 100644
+--- a/node_modules/@soundworks/core/src/server/Socket.js
++++ b/node_modules/@soundworks/core/src/server/Socket.js
+@@ -88,15 +88,14 @@ class Socket {
+     this.#heartbeatId = setInterval(() => {
+       // we didn't receive the pong message
+       if (heartbeatMissed > 0) {
+-        // Emit a 'close' event to go trough all the disconnection pipeline
+-        //
+-        // @note - this seems to create false positive disconnections when
+-        // client is busy, e.g. when loading large sound files so let's just warn
+-        // until we gather more feedback
+-        // cf. https://making.close.com/posts/reliable-websockets/
+         console.warn(`[Socket] client (id: ${this[kSocketClientId]}) did not respond to ping message in time (missed: ${heartbeatMissed},  interval: ${PING_INTERVAL})`);
+-        // this.#dispatchEvent('close');
+-        // return;
++        // Terminate after 3 missed pings (~30s) to clean up stale connections
++        // (e.g. iOS Safari after page reload). Threshold avoids false positives
++        // when clients are busy loading large audio files.
++        if (heartbeatMissed >= 3) {
++          this.#dispatchEvent('close');
++          return;
++        }
+       }
+ 
+       heartbeatMissed += 1;

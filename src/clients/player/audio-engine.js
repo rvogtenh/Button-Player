@@ -8,11 +8,12 @@
  * Call updateParams() whenever the state changes, then trigger() on button press.
  */
 export class AudioEngine {
-  constructor(audioContext) {
+  constructor(audioContext, options) {
     this._ctx = audioContext;
     this._params = null;
     this._sampleBuffer = null;
     this._loadedSampleFile = null;
+    this._onSampleReady = options?.onSampleReady ?? null;
 
     // Each engine instance routes through its own master gain
     this._masterGain = this._ctx.createGain();
@@ -136,6 +137,10 @@ export class AudioEngine {
     source.stop(now + duration + 0.01);
   }
 
+  hasSampleBuffer() { return this._sampleBuffer !== null; }
+
+  getMode() { return this._params?.mode ?? null; }
+
   /**
    * Fetch and decode a sample file.
    * Uses callback-style decodeAudioData for Safari compatibility.
@@ -149,7 +154,7 @@ export class AudioEngine {
       .then(arrayBuffer => {
         this._ctx.decodeAudioData(
           arrayBuffer,
-          buffer => { this._sampleBuffer = buffer; },
+          buffer => { this._sampleBuffer = buffer; this._onSampleReady?.(); },
           err => { console.error('[AudioEngine] decodeAudioData failed:', err); },
         );
       })

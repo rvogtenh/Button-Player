@@ -14,7 +14,8 @@
     "watch": "soundworks-build -p",
     "watch:inspect": "soundworks-build -i -p",
     "watch:sass": "sass --watch src/clients/styles:.build/public/css",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@ircam/sc-components": "^3.0.0-alpha.60",
@@ -29,6 +30,7 @@
     "@soundworks/create": "^1.0.0-alpha.23",
     "concurrently": "^8.2.2",
     "eslint": "^9.8.0",
+    "patch-package": "^8.0.1",
     "sass": "^1.77.1"
   }
 }

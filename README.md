@@ -103,6 +103,12 @@ The soundworks wizard is an interactive CLI for managing clients, plugins, and c
 npx soundworks
 ```
 
+## Known Issues
+
+### iOS Safari — Page Reload over WiFi
+
+Reloading the page on iOS Safari over WiFi may result in a black screen (WebSocket reconnection failure). Workaround: close the tab and reopen the URL. Permanent fix: enable HTTPS via `mkcert` (`useHttps: true` in `config/env-default.yaml`).
+
 ## Credits
 
 - [soundworks](https://soundworks.dev) is developed by the ISMM team at Ircam

@@ -14,31 +14,19 @@ let joined = false;
 let playerInfo = null;     // player-info state (deleted on reset / disconnect)
 let myGroupState = null;   // group-params state this player belongs to
 
-const SESSION_KEY = 'sw-player-session';
-
-function saveSession(groupId, resetCounter) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ joined: true, groupId, resetCounter }));
-}
-
-function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
-}
-
-function loadSession() {
-  try {
-    return JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null');
-  } catch {
-    return null;
-  }
-}
 
 async function main($container) {
   const config = loadConfig();
   const client = new Client(config);
 
-  launcher.register(client, { initScreensContainer: $container });
+  launcher.register(client, { initScreensContainer: $container, reloadOnVisibilityChange: false });
 
   await client.start();
+
+  // On page unload (reload/navigate), explicitly close the WebSocket so the server
+  // receives a clean close frame immediately — prevents stale zombie connections
+  // that block reconnection on iOS Safari.
+  window.addEventListener('pagehide', () => { client.stop(); });
 
   // Global state: listen for resetCounter changes
   const soundParams = await client.stateManager.attach('sound-params');
@@ -57,10 +45,15 @@ async function main($container) {
   }
 
   function renderPlayer() {
+    const loading = engine?.getMode() === 'sample' && !engine?.hasSampleBuffer();
     render(html`
       <div class="simple-layout">
         <div class="trigger-layout">
-          <button class="trigger-btn" @pointerdown=${onTrigger}>Play</button>
+          <button class="trigger-btn"
+            ?disabled=${loading}
+            @pointerdown=${onTrigger}>
+            ${loading ? 'Loading…' : 'Play'}
+          </button>
         </div>
         <sw-credits .infos="${config.app}"></sw-credits>
       </div>
@@ -73,7 +66,6 @@ async function main($container) {
     const actualGroupId = myGroupState.get('groupId');
 
     joined = true;
-    saveSession(actualGroupId, soundParams.get('resetCounter'));
 
     if (!audioContext) {
       audioContext = new AudioContext();
@@ -85,7 +77,7 @@ async function main($container) {
       groupId: actualGroupId,
     });
 
-    engine = new AudioEngine(audioContext);
+    engine = new AudioEngine(audioContext, { onSampleReady: () => renderPlayer() });
     engine.updateParams(myGroupState.getValues());
     myGroupState.onUpdate(values => engine.updateParams(values));
 
@@ -105,7 +97,6 @@ async function main($container) {
     if (engine) { engine.dispose(); engine = null; }
     myGroupState = null;
     joined = false;
-    clearSession();
     renderLanding();
   }
 
@@ -117,7 +108,7 @@ async function main($container) {
 
   // Restore state: reconnect within same JS session
   if (joined && myGroupState) {
-    engine = new AudioEngine(audioContext);
+    engine = new AudioEngine(audioContext, { onSampleReady: () => renderPlayer() });
     engine.updateParams(myGroupState.getValues());
     myGroupState.onUpdate(values => engine.updateParams(values));
     playerInfo = await client.stateManager.create('player-info', {
@@ -126,13 +117,11 @@ async function main($container) {
     });
     renderPlayer();
   } else {
-    // Page reload: check sessionStorage
-    const session = loadSession();
-    if (session?.joined && session.resetCounter === soundParams.get('resetCounter')) {
-      await onJoin(session.groupId);
-    } else {
-      renderLanding();
-    }
+    // Page reload: always show landing page.
+    // Auto-restore via sessionStorage is intentionally skipped:
+    // iOS Safari requires a fresh user gesture to create a running AudioContext.
+    // See docs/briefings/2026-03-12_A_issues.md — Option B for a lazy-context alternative.
+    renderLanding();
   }
 }
 
