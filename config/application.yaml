@@ -7,3 +7,4 @@ clients:
   controller:
     target: browser
     default: false
+    path: controller
